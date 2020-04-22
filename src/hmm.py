@@ -101,9 +101,9 @@ class HiddenMarkovModel(object):
 
         # recursion step
         for t in range(1, len(observations)):
-            for s in range(0, len(self.states)):
-                max_v, index_max = 0, 1
-                for i in range(0, len(self.states)):
+            for s in range(len(self.states)):
+                max_v, index_max = 0, 0
+                for i in range(len(self.states)):
                     v_v = v[i][t - 1]
                     transition = self.transition_probabilities[self.states[i]
                                                                ][self.states[s]]
@@ -117,7 +117,7 @@ class HiddenMarkovModel(object):
                 backpoints[s][t] = index_max
 
         # termination step
-        max_v, index_max = 0, 1
+        max_v, index_max = 0, 0
         for i in range(0, len(self.states)):
             if max_v < v[i][len(observations) - 1]:
                 max_v = v[i][len(observations) - 1]
