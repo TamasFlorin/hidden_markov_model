@@ -2,7 +2,7 @@ import unittest
 from hmm import HiddenMarkovModel
 
 
-class HmmTest(unittest.TestCase):
+class HmmWeatherTest(unittest.TestCase):
     def setUp(self):
         self.states = ["rainy", "sunny"]
 
@@ -60,19 +60,18 @@ class HmmTest(unittest.TestCase):
     def test_backward(self):
         observations = ["walk", "shop", "clean"]
         P, backwards = self.hmm.backward(observations)
-        print(backwards)
-        self.assertEqual(P, 0.033611999999999996)
+        self.assertEqual(P, 0.033612)
         # day 1
-        self.assertEqual(backwards[0], ('rainy', 0.06))
-        self.assertEqual(backwards[1], ('sunny', 0.24))
+        self.assertEqual(backwards[0], ('rainy', 1.0))
+        self.assertEqual(backwards[1], ('sunny', 1.0))
 
         # day 2
-        self.assertEqual(backwards[2], ('rainy', 0.0552))
-        self.assertEqual(backwards[3], ('sunny', 0.0486))
+        self.assertEqual(backwards[2], ('rainy', 0.38))
+        self.assertEqual(backwards[3], ('sunny', 0.26))
 
         # day 3
-        self.assertEqual(backwards[4], ('rainy', 0.029039999999999996))
-        self.assertEqual(backwards[5], ('sunny', 0.004572))
+        self.assertEqual(backwards[4], ('rainy', 0.1298))
+        self.assertEqual(backwards[5], ('sunny', 0.10760000000000002))
 
     def test_viterbi(self):
         observations = ["walk", "shop", "clean"]

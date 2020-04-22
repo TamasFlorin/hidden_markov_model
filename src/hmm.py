@@ -42,9 +42,8 @@ class HiddenMarkovModel(object):
                 forwards.append((self.states[s], current_sum))
 
         # termination step
-        P = 0.0
-        for s in range(0, len(self.states)):
-            P = P + f[s][len(observations) - 1]
+        T = len(observations) - 1
+        P = sum(f[s][T] for s in range(len(self.states)))
 
         return P, forwards
 
@@ -62,25 +61,25 @@ class HiddenMarkovModel(object):
             backwards.append((state, b[i][T]))
 
         # recursion step
-        for t in range(T - 1, 0, -1):
+        for t in range(T - 1, -1, -1):
             next_observation = observations[t + 1]
-            for i, prev_state in enumerate(self.states):
+            for i, state in enumerate(self.states):
                 current_sum = 0
-                for j, curr_state in enumerate(self.states):
-                    transition = self.transition_probabilities[prev_state][curr_state]
-                    emission = self.emission_probabilities[curr_state][next_observation]
+                for j, next_state in enumerate(self.states):
+                    transition = self.transition_probabilities[state][next_state]
+                    emission = self.emission_probabilities[next_state][next_observation]
                     next_value = b[j][t + 1]
                     current_sum += (transition * emission * next_value)
                 b[i][t] = current_sum
-                backwards.append((prev_state, b[i][t]))
+                backwards.append((state, b[i][t]))
 
         # termination step
         P = 0.0
         first_obs = observations[0]
-        for j, state in enumerate(self.states[1:], start=1):
+        for j, state in enumerate(self.states):
             transition = self.initial_probabilities[state]
             emission = self.emission_probabilities[state][first_obs]
-            P += transition * emission * b[0][j]
+            P += (transition * emission * b[j][0])
 
         return P, backwards
 
