@@ -57,9 +57,8 @@ class HiddenMarkovModel(object):
         b = [[0.0 for _ in observations] for _ in self.states]
         backwards = []
         T = len(observations) - 1
-        F = self.states[-1]
         for i, state in enumerate(self.states):
-            b[i][T] = self.transition_probabilities[state][F]
+            b[i][T] = 1.0
             backwards.append((state, b[i][T]))
 
         # recursion step
