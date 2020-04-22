@@ -1,6 +1,8 @@
 from typing import List
 from typing import Any
 from typing import Tuple
+from math import isclose
+from copy import deepcopy
 
 
 class HiddenMarkovModel(object):
@@ -10,11 +12,12 @@ class HiddenMarkovModel(object):
     best label.
     """
 
-    def __init__(self, states: List[Any], transition_probabilities: Any, emission_probabilities: Any, initial_probabilities: Any):
+    def __init__(self, states: List[Any], vocabulary: List[Any], transition_probabilities: Any, emission_probabilities: Any, initial_probabilities: Any):
         self.transition_probabilities = transition_probabilities
         self.emission_probabilities = emission_probabilities
         self.initial_probabilities = initial_probabilities
         self.states = states
+        self.vocabulary = vocabulary
 
     def forward(self, observations: List[Any]) -> Tuple[float, List[Tuple[Any, float]]]:
         """
@@ -25,6 +28,9 @@ class HiddenMarkovModel(object):
         :return: The probability of seeing the given observations along with the forward states
                  for each iteration.
         """
+        assert len(
+            observations) > 0, "Observations list must contain at least one element."
+
         f = [[0.0 for _ in observations] for _ in self.states]
         forwards = []
 
@@ -54,7 +60,7 @@ class HiddenMarkovModel(object):
         T = len(observations) - 1
         P = sum(f[s][T] for s in range(len(self.states)))
 
-        return P, forwards
+        return P, f
 
     def backward(self, observations: List[Any]) -> Tuple[float, List[Tuple[Any, float]]]:
         """
@@ -65,6 +71,8 @@ class HiddenMarkovModel(object):
         :return: The probability of seeing the given observations along with the backward states
                  for each iteration.
         """
+        assert len(
+            observations) > 0, "Observations list must contain at least one element."
 
         b = [[0.0 for _ in observations] for _ in self.states]
         backwards = []
@@ -94,7 +102,7 @@ class HiddenMarkovModel(object):
             emission = self.emission_probabilities[state][first_obs]
             P += (transition * emission * b[j][0])
 
-        return P, backwards
+        return P, b
 
     def viterbi(self, observations: List[Any]) -> Tuple[float, List[Any]]:
         """
@@ -142,3 +150,60 @@ class HiddenMarkovModel(object):
                                    for i in range(len(self.states)))
         path = [self.states[index] for index in backpoints[max_index]]
         return max_value, path
+
+    def forward_backward(self, observations: List[Any]):
+        assert len(
+            observations) > 0, "Observations list must contain at least one element."
+
+        forward_probability, forwards = self.forward(observations)
+        backward_probability, backwards = self.backward(observations)
+
+        # probabilities should be roughly the same
+        assert isclose(forward_probability, backward_probability)
+
+        observations_probability = forward_probability
+
+        gamma = [[0.0 for _ in observations] for _ in self.states]
+        for t in range(len(observations)):
+            for y in range(len(self.states)):
+                gamma[y][t] = forwards[y][t] \
+                    * backwards[y][t] \
+                    / observations_probability
+
+        xi = [[[0 for _ in observations] for _ in self.states]
+              for _ in self.states]
+
+        for t in range(0, len(observations) - 1):
+            for s1, state1 in enumerate(self.states):
+                for s2, state2 in enumerate(self.states):
+                    f_value = forwards[s1][t]
+                    transition = self.transition_probabilities[state1][state2]
+                    emission = self.emission_probabilities[state2][observations[t + 1]]
+                    b_value = backwards[s2][t + 1]
+                    xi[s1][s2][t] = f_value * transition * emission * b_value \
+                        / observations_probability
+
+        first_state = self.states[0]
+        last_state = self.states[-1]
+
+        # compute new transition probabilities
+        transition_prob = deepcopy(self.transition_probabilities)
+        for i, state in enumerate(self.states):
+            state_probability = sum(gamma[i])
+            transition_prob[first_state][state] = gamma[i][0]
+            transition_prob[state][last_state] = gamma[i][-1] / \
+                state_probability
+
+            for j, other_state in enumerate(self.states):
+                transition_prob[state][other_state] = sum(
+                    xi[i][j]) / state_probability
+
+        # compute new emission probabilities
+        emission_prob = deepcopy(self.emission_probabilities)
+        for i, state in enumerate(self.states):
+            for j, symbol in enumerate(self.vocabulary):
+                current_sum = sum(gamma[i][t] for t in range(
+                    len(observations)) if observations[t] == symbol)
+                emission_prob[state][symbol] = current_sum / sum(gamma[i])
+
+        return HiddenMarkovModel(self.states, self.vocabulary, transition_prob, emission_prob, self.initial_probabilities)

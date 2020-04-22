@@ -5,6 +5,7 @@ from hmm import HiddenMarkovModel
 class HmmWeatherTest(unittest.TestCase):
     def setUp(self):
         self.states = ["rainy", "sunny"]
+        self.vocabulary = ["waslk", "shop", "clean"]
 
         self.initial_probabilities = {
             "rainy": 0.6,
@@ -39,42 +40,36 @@ class HmmWeatherTest(unittest.TestCase):
         }
 
         self.hmm = HiddenMarkovModel(
-            self.states, self.transition_probabilities, self.emission_probabilities, self.initial_probabilities)
+            self.states,  # all the possible hidden states
+            self.vocabulary,  # all possible observation types
+            self.transition_probabilities,
+            self.emission_probabilities,
+            self.initial_probabilities
+        )
 
     def test_forward(self):
         observations = ["walk", "shop", "clean"]
         P, forwards = self.hmm.forward(observations)
         self.assertEqual(P, 0.033611999999999996)
-        # day 1
-        self.assertEqual(forwards[0], ('rainy', 0.06))
-        self.assertEqual(forwards[1], ('sunny', 0.24))
-
-        # day 2
-        self.assertEqual(forwards[2], ('rainy', 0.0552))
-        self.assertEqual(forwards[3], ('sunny', 0.0486))
-
-        # day 3
-        self.assertEqual(forwards[4], ('rainy', 0.029039999999999996))
-        self.assertEqual(forwards[5], ('sunny', 0.004572))
+        self.assertEqual(forwards[0], [0.06, 0.0552, 0.029039999999999996])
+        self.assertEqual(forwards[1], [0.24, 0.0486, 0.004572])
 
     def test_backward(self):
         observations = ["walk", "shop", "clean"]
         P, backwards = self.hmm.backward(observations)
         self.assertEqual(P, 0.033612)
-        # day 1
-        self.assertEqual(backwards[0], ('rainy', 1.0))
-        self.assertEqual(backwards[1], ('sunny', 1.0))
-
-        # day 2
-        self.assertEqual(backwards[2], ('rainy', 0.38))
-        self.assertEqual(backwards[3], ('sunny', 0.26))
-
-        # day 3
-        self.assertEqual(backwards[4], ('rainy', 0.1298))
-        self.assertEqual(backwards[5], ('sunny', 0.10760000000000002))
+        self.assertEqual(backwards[0], [0.1298, 0.38, 1.0])
+        self.assertEqual(backwards[1], [0.10760000000000002, 0.26, 1.0])
 
     def test_viterbi(self):
         observations = ["walk", "shop", "clean"]
         P, backpoints = self.hmm.viterbi(observations)
         self.assertEqual(P, 0.01344)
         self.assertEqual(backpoints, ['sunny', 'rainy', 'rainy'])
+
+    def test_forward_backward(self):
+        observations = ["walk", "shop", "clean"]
+        new_hmm = self.hmm.forward_backward(observations)
+        prediction = new_hmm.viterbi(observations[:3])
+        self.assertEqual(prediction, (0.010992253093590539,
+                                      ['sunny', 'rainy', 'rainy']))
