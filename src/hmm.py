@@ -1,3 +1,8 @@
+from typing import List
+from typing import Any
+from typing import Tuple
+
+
 class HiddenMarkovModel(object):
     """
     A probabilistic sequence classifier - given a sequence of units,
@@ -5,16 +10,20 @@ class HiddenMarkovModel(object):
     best label.
     """
 
-    def __init__(self, states, transition_probabilities, emission_probabilities, initial_probabilities):
+    def __init__(self, states: List[Any], transition_probabilities: Any, emission_probabilities: Any, initial_probabilities: Any):
         self.transition_probabilities = transition_probabilities
         self.emission_probabilities = emission_probabilities
         self.initial_probabilities = initial_probabilities
         self.states = states
 
-    def forward(self, observations):
+    def forward(self, observations: List[Any]) -> Tuple[float, List[Tuple[Any, float]]]:
         """
         Returns the probability of seeing the given `observations` sequence,
         using the Forward algorithm.
+
+        :param observations: The list of observed values.
+        :return: The probability of seeing the given observations along with the forward states
+                 for each iteration.
         """
         f = [[0.0 for _ in observations] for _ in self.states]
         forwards = []
@@ -47,10 +56,14 @@ class HiddenMarkovModel(object):
 
         return P, forwards
 
-    def backward(self, observations):
+    def backward(self, observations: List[Any]) -> Tuple[float, List[Tuple[Any, float]]]:
         """
         Returns the probability of seeing the given `observations` sequence,
         using the Backward algorithm.
+
+        :param observations: The list of observed values.
+        :return: The probability of seeing the given observations along with the backward states
+                 for each iteration.
         """
 
         b = [[0.0 for _ in observations] for _ in self.states]
@@ -83,13 +96,16 @@ class HiddenMarkovModel(object):
 
         return P, backwards
 
-    def viterbi(self, observations):
+    def viterbi(self, observations: List[Any]) -> Tuple[float, List[Any]]:
         """
-        Returns the best path of states and the probability that the returned states 
+        Returns the best path of states and the probability that the returned states
         will lead to the given observations.
+
+        :param observations: The list of observed values.
+        :return: The list of the most likely states and the probability.
         """
         v = [[0.0 for _ in observations] for _ in self.states]
-        backpoints = [[0 for _ in observations] for _ in self.states]
+        backpoints = [[None] for _ in self.states]
 
         # Initialization step
         for s in range(0, len(self.states)):
@@ -98,11 +114,13 @@ class HiddenMarkovModel(object):
                                                    ][observations[0]]
             result = transition * emission
             v[s][0] = result
+            backpoints[s] = [s]
 
         # recursion step
         for t in range(1, len(observations)):
+            current_backpoints = [0 for _ in self.states]
             for s in range(len(self.states)):
-                max_v, index_max = 0, 0
+                values = []
                 for i in range(len(self.states)):
                     v_v = v[i][t - 1]
                     transition = self.transition_probabilities[self.states[i]
@@ -110,18 +128,17 @@ class HiddenMarkovModel(object):
                     emission = self.emission_probabilities[self.states[s]
                                                            ][observations[t]]
                     result = v_v * transition * emission
-                    if max_v < result:
-                        max_v = result
-                        index_max = i
-                v[s][t] = max_v
-                backpoints[s][t] = index_max
+                    values.append(result)
+
+                max_value, max_index = max((v, idx)
+                                           for idx, v in enumerate(values))
+                current_backpoints[s] = backpoints[max_index] + [s]
+                v[s][t] = max_value
+            backpoints = current_backpoints
 
         # termination step
-        max_v, index_max = 0, 0
-        for i in range(0, len(self.states)):
-            if max_v < v[i][len(observations) - 1]:
-                max_v = v[i][len(observations) - 1]
-                index_max = i
-
-        P = max_v
-        return P, (self.states[index_max], backpoints[index_max])
+        T = len(observations) - 1
+        max_value, max_index = max((v[i][T], i)
+                                   for i in range(len(self.states)))
+        path = [self.states[index] for index in backpoints[max_index]]
+        return max_value, path

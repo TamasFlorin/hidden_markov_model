@@ -77,4 +77,4 @@ class HmmWeatherTest(unittest.TestCase):
         observations = ["walk", "shop", "clean"]
         P, backpoints = self.hmm.viterbi(observations)
         self.assertEqual(P, 0.01344)
-        self.assertEqual(backpoints, ('rainy', [0, 1, 0]))
+        self.assertEqual(backpoints, ['sunny', 'rainy', 'rainy'])
