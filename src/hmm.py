@@ -37,6 +37,7 @@ class HiddenMarkovModel(object):
         # initialization step
         for i, state in enumerate(self.states):
             transition = self.initial_probabilities[state]
+            print(state)
             emission = self.emission_probabilities[state][observations[0]]
             result = transition * emission
             f[i][0] = result
@@ -44,16 +45,22 @@ class HiddenMarkovModel(object):
 
         # recursion step
         for t, observation in enumerate(observations[1:], start=1):
-            for s in range(0, len(self.states)):
+            for s in range(len(self.states)):
                 current_sum = 0
-                for i in range(0, len(self.states)):
+                for i in range(len(self.states)):
+                    if i == s:
+                        continue
                     f_value = f[i][t - 1]
+                    # print(self.transition_probabilities[self.states[i]])
                     transition = self.transition_probabilities[self.states[i]
                                                                ][self.states[s]]
-                    emission = self.emission_probabilities[self.states[s]
-                                                           ][observation]
-                    current_sum += (f_value * transition * emission)
-                f[s][t] = current_sum
+                    print("From {} to {} with t={} f={}".format(
+                        self.states[i], self.states[s], transition, f_value))
+                    current_sum += (f_value * transition)
+
+                emission = self.emission_probabilities[self.states[s]
+                                                       ][observation]
+                f[s][t] = current_sum * emission
                 forwards.append((self.states[s], current_sum))
 
         # termination step
@@ -87,6 +94,8 @@ class HiddenMarkovModel(object):
             for i, state in enumerate(self.states):
                 current_sum = 0
                 for j, next_state in enumerate(self.states):
+                    if i == j:
+                        continue
                     transition = self.transition_probabilities[state][next_state]
                     emission = self.emission_probabilities[next_state][next_observation]
                     next_value = b[j][t + 1]
@@ -160,50 +169,64 @@ class HiddenMarkovModel(object):
 
         # probabilities should be roughly the same
         assert isclose(forward_probability, backward_probability)
+        assert forward_probability > 0
 
-        observations_probability = forward_probability
-
-        gamma = [[0.0 for _ in observations] for _ in self.states]
-        for t in range(len(observations)):
-            for y in range(len(self.states)):
-                gamma[y][t] = forwards[y][t] \
-                    * backwards[y][t] \
-                    / observations_probability
-
-        xi = [[[0 for _ in observations] for _ in self.states]
+        T = len(observations) - 1
+        N = len(self.states)
+        gamma = [[0.0 for _ in range(T + 1)]
+                 for _ in self.states]
+        xi = [[[0 for _ in range(T)] for _ in self.states]
               for _ in self.states]
 
-        for t in range(0, len(observations) - 1):
-            for s1, state1 in enumerate(self.states):
-                for s2, state2 in enumerate(self.states):
-                    f_value = forwards[s1][t]
-                    transition = self.transition_probabilities[state1][state2]
-                    emission = self.emission_probabilities[state2][observations[t + 1]]
-                    b_value = backwards[s2][t + 1]
-                    xi[s1][s2][t] = f_value * transition * emission * b_value \
-                        / observations_probability
+        for t in range(T):
+            s = 0
+            next_obs = observations[t + 1]
+            for i, state1 in enumerate(self.states):
+                for j, state2 in enumerate(self.states):
+                    xi[i][j][t] = forwards[i][t] * self.transition_probabilities[state1][state2] * \
+                        self.emission_probabilities[state2][next_obs] * \
+                        backwards[j][t+1]
+                    s += xi[i][j][t]
 
-        first_state = self.states[0]
-        last_state = self.states[-1]
+            # Normalize
+            for i in range(N):
+                for j in range(N):
+                    xi[i][j][t] *= 1 / s
 
-        # compute new transition probabilities
-        transition_prob = deepcopy(self.transition_probabilities)
+        # Now calculate the gamma table
+        for t in range(T):
+            for i in range(N):
+                s = 0
+                for j in range(N):
+                    s += xi[i][j][t]
+                gamma[i][t] = s
+
+        # update the initial probabilities
+        new_initial = deepcopy(self.initial_probabilities)
         for i, state in enumerate(self.states):
-            state_probability = sum(gamma[i])
-            transition_prob[first_state][state] = gamma[i][0]
-            transition_prob[state][last_state] = gamma[i][-1] / \
-                state_probability
+            new_initial[state] = gamma[i][0]
 
-            for j, other_state in enumerate(self.states):
-                transition_prob[state][other_state] = sum(
-                    xi[i][j]) / state_probability
+        # update transition probabilities
+        new_transition = deepcopy(self.transition_probabilities)
+        for i, state1 in enumerate(self.states):
+            for j, state2 in enumerate(self.states):
+                numerator = 0
+                denominator = 0
+                for t in range(T):
+                    numerator += xi[i][j][t]
+                    denominator += gamma[i][t]
+                new_transition[state1][state2] = numerator / denominator
 
-        # compute new emission probabilities
-        emission_prob = deepcopy(self.emission_probabilities)
-        for i, state in enumerate(self.states):
-            for j, symbol in enumerate(self.vocabulary):
-                current_sum = sum(gamma[i][t] for t in range(
-                    len(observations)) if observations[t] == symbol)
-                emission_prob[state][symbol] = current_sum / sum(gamma[i])
+        # update emission probabilities
+        new_emission = deepcopy(self.emission_probabilities)
+        for j, state in enumerate(self.states):
+            for value in self.vocabulary:
+                numerator = 0
+                denominator = 0
+                for t in range(T):
+                    if observations[t] == value:
+                        numerator += gamma[j][t]
+                    denominator += gamma[j][t]
+                new_emission[state][value] = numerator / denominator
 
-        return HiddenMarkovModel(self.states, self.vocabulary, transition_prob, emission_prob, self.initial_probabilities)
+        return HiddenMarkovModel(self.states, self.vocabulary, new_transition, new_emission, new_initial)

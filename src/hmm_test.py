@@ -50,9 +50,9 @@ class HmmWeatherTest(unittest.TestCase):
     def test_forward(self):
         observations = ["walk", "shop", "clean"]
         P, forwards = self.hmm.forward(observations)
-        self.assertEqual(P, 0.033611999999999996)
-        self.assertEqual(forwards[0], [0.06, 0.0552, 0.029039999999999996])
-        self.assertEqual(forwards[1], [0.24, 0.0486, 0.004572])
+        self.assertEqual(P, 0.033612)
+        self.assertEqual(forwards[0], [0.06, 0.055200000000000006, 0.02904])
+        self.assertEqual(forwards[1], [0.24, 0.04859999999999999, 0.004572])
 
     def test_backward(self):
         observations = ["walk", "shop", "clean"]
@@ -71,5 +71,5 @@ class HmmWeatherTest(unittest.TestCase):
         observations = ["walk", "shop", "clean"]
         new_hmm = self.hmm.forward_backward(observations)
         prediction = new_hmm.viterbi(observations[:3])
-        self.assertEqual(prediction, (0.010992253093590539,
+        self.assertEqual(prediction, (0.010992253093590533,
                                       ['sunny', 'rainy', 'rainy']))
