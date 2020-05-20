@@ -5,7 +5,7 @@ from hmm import HiddenMarkovModel
 class HmmWeatherTest(unittest.TestCase):
     def setUp(self):
         self.states = ["rainy", "sunny"]
-        self.vocabulary = ["waslk", "shop", "clean"]
+        self.vocabulary = ["walk", "shop", "clean"]
 
         self.initial_probabilities = {
             "rainy": 0.6,
@@ -71,5 +71,5 @@ class HmmWeatherTest(unittest.TestCase):
         observations = ["walk", "shop", "clean"]
         new_hmm = self.hmm.forward_backward(observations)
         prediction = new_hmm.viterbi(observations[:3])
-        self.assertEqual(prediction, (0.010992253093590533,
+        self.assertEqual(prediction, (0.010994296643152459,
                                       ['sunny', 'rainy', 'rainy']))
