@@ -1,7 +1,6 @@
 # Hidden Markov Model Project
 
-The goal of this project is to provide a hidden markov model that can be used for
-handwritting recognition.
+The goal of this project is to provide a basic hidden markov model implementation.
 
 ## Running the model
 
