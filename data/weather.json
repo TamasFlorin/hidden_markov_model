@@ -1,0 +1,30 @@
+{
+  "states": ["rainy", "sunny"],
+  "vocabulary": ["walk", "shop", "clean"],
+  "initial_probabilities": {
+    "rainy": 0.6,
+    "sunny": 0.4
+  },
+  "transition_probabilities": {
+    "rainy": {
+      "rainy": 0.7,
+      "sunny": 0.3
+    },
+    "sunny": {
+      "rainy": 0.4,
+      "sunny": 0.6
+    }
+  },
+  "emission_probabilities": {
+    "rainy": {
+      "walk": 0.1,
+      "shop": 0.4,
+      "clean": 0.5
+    },
+    "sunny": {
+      "walk": 0.6,
+      "shop": 0.3,
+      "clean": 0.1
+    }
+  }
+}
