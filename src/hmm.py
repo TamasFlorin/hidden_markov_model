@@ -162,7 +162,7 @@ class HiddenMarkovModel(object):
         assert isclose(forward_probability, backward_probability)
         assert forward_probability > 0
 
-        observations_probability = forward_probability
+        observations_probability = backward_probability
 
         gamma = [[0.0 for _ in observations] for _ in self.states]
         for t in range(len(observations)):
@@ -206,7 +206,17 @@ class HiddenMarkovModel(object):
                 current_sum = sum(gamma[i][t] for t in range(
                     len(observations)) if observations[t] == symbol)
                 gamma_sum = sum(gamma[i])
-                gamma_sum = gamma_sum if gamma_sum > 0 else 1.0
+                gamma_sum = gamma_sum
                 emission_prob[state][symbol] = current_sum / gamma_sum
 
         return HiddenMarkovModel(self.states, self.vocabulary, transition_prob, emission_prob, self.initial_probabilities)
+
+    def train(self, observations: List[List[Any]], iterations: int):
+        """
+        Train the current model for the given number of iterations and return the new model.
+        """
+        hmm = self
+        for _ in range(iterations):
+            for observation in observations:
+                hmm = hmm.forward_backward(observation)
+        return hmm
